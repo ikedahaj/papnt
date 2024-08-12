@@ -5,7 +5,7 @@ from notion_client import Client
 import sys
 import traceback
 import papnt
-from flet_core import control_event
+
 import papnt.misc
 
 import papnt.database
@@ -62,11 +62,8 @@ def main(page: ft.Page):
         colum.clean()
         page.update()
     #Enterキーを押されたら文字を加える.
-    def add_entered(e:control_event.ControlEvent):
-        print(type(e))
-        print(e)
-        print(e.control.value)
-        if e.control.value=="Enter":
+    def add_entered(e:ft.KeyboardEvent):
+        if e.key=="Enter":
             add_clicked(e)
     def run_clicked(e):
         database_info=papnt.database.DatabaseInfo()
@@ -104,9 +101,8 @@ def main(page: ft.Page):
                 input_doi.value="Done "+doi
             page.update()
     # page.title("Papnt Control")
-    new_task = ft.TextField(hint_text="Please input DOI",autofocus=True)
-    new_task.on_change=add_entered
-    # page.on_keyboard_event=add_entered
+    new_task = ft.TextField(hint_text="Please input DOI")
+    page.on_keyboard_event=add_entered
     add_bottun=ft.FloatingActionButton(icon=ft.icons.ADD, on_click=add_clicked)
     run_bottun=ft.FloatingActionButton(icon=ft.icons.RUN_CIRCLE, on_click=run_clicked)
     delete_bottun=ft.FloatingActionButton(icon=ft.icons.DELETE, on_click=delete_clicked)
