@@ -1,0 +1,20 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python デバッガー: 現在のファイル",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/papnt",
+      "program": "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/papnt/build/Debug/outDebug"
+    }
+  ]
+}
