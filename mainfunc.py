@@ -5,11 +5,12 @@ from bibtexparser.bwriter import BibTexWriter
 from bibtexparser.bibdatabase import BibDatabase
 
 from .database import Database
+from .database import DatabaseInfo
 from .abbrlister import AbbrLister
 from .pdf2doi import pdf_to_doi
 from .notionprop import NotionPropMaker
 from .prop2entry import notionprop_to_entry
-
+from .misc import load_config
 
 DEBUGMODE = False
 
@@ -24,11 +25,17 @@ def add_records_from_local_pdfpath(
     prop |= {'info': {'checkbox': True}}
     database.create(prop)
 
-def create_records_from_doi(doi:str,
-        database: Database=None, propnames: dict =None):
-    prop = NotionPropMaker().from_doi(doi, propnames)
+def create_records_from_doi(doi:str):
+    dbinfo=DatabaseInfo()
+    database=Database(dbinfo)
+    prop = NotionPropMaker().from_doi(doi,dbinfo.propnames)
     prop |= {'info': {'checkbox': True}}
-    database.create(prop)
+    try:
+        database.create(prop)
+    except Exception as e:
+        print(str(e))
+        name = prop['Name']['title'][0]['text']['content']
+        raise ValueError(f'Error while updating record: {name}')
 
 def _update_record_from_doi(
         database: Database, doi: str, id_record: str, propnames: dict):
