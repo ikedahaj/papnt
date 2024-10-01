@@ -42,7 +42,7 @@ class Editable_Text(ft.Row):
         new_value.on_submit=self.ET_clicked_done_edit
         ET_edit_view=[new_value,ET_button_done_edit]
         self.controls=ET_edit_view
-        self.controls[0].data=control_save
+        self.data=control_save
         self.update()
         new_value.focus()
     def ET_clicked_text_delete(self,e):
@@ -52,7 +52,7 @@ class Editable_Text(ft.Row):
         run_papnt_doi(self)
 
     def ET_clicked_done_edit(self,e):
-        saved=self.controls[0].data
+        saved=self.data
         self.value=self.controls[0].value
         # saved[0].value=self.controls[0].value
         saved[0].value=self.controls[0].value
