@@ -3,7 +3,7 @@
 import flet as ft
 from notion_client import Client
 import sys
-import traceback
+import configparser
 import papnt
 
 import papnt.misc
@@ -25,6 +25,34 @@ def format_doi(doi:str)->str:
     elif ("arXiv" in doi) and doi[-3]=="v":
         doi=doi[:-3]
     return doi
+class Edit_Database(ft.Row):
+    def __init__(self):
+        super().__init__()
+        self.ED_path_config=papnt.__path__[0]+"/config.ini"
+        self.config=configparser.ConfigParser(comment_prefixes='/', allow_no_value=True)
+        self.config.read(self.ED_path_config)
+        self.ED_text_tokenkey=ft.Text(value=self.config["database"]["tokenkey"])
+        self.ED_text_database_id=ft.Text(value=self.config["database"]["database_id"])
+        ED_buttun_edit=ft.FloatingActionButton(icon=ft.icons.EDIT,on_click=self.ED_clicked_text_edit)
+        ED_buttun_edit.mini=True
+        self.controls=[ED_buttun_edit,self.ED_text_tokenkey,self.ED_text_database_id]
+    def ED_clicked_text_edit(self,e):
+        self.ED_text_database_id=ft.TextField(value=self.config["database"]["database_id"],hint_text="database_id")
+        self.ED_text_tokenkey=ft.TextField(value=self.config["database"]["tokenkey"],hint_text="tokenkey")
+        self.controls=[ft.FloatingActionButton(icon=ft.icons.DONE,on_click=self.ED_clicked_done_edit),self.ED_text_tokenkey,self.ED_text_database_id]
+        self.update()
+
+    def ED_clicked_done_edit(self,e):
+        self.controls[0]=ft.FloatingActionButton(icon=ft.icons.EDIT,on_click=self.ED_clicked_text_edit,mini=True)
+        self.config["database"]["database_id"]=self.ED_text_database_id.value
+        self.config["database"]["tokenkey"]=self.ED_text_tokenkey.value
+        with open(self.ED_path_config, "w") as configfile:
+            self.config.write(configfile, True)
+        self.ED_text_tokenkey=ft.Text(value=self.config["database"]["tokenkey"])
+        self.ED_text_database_id=ft.Text(value=self.config["database"]["database_id"])
+        self.update()
+
+
 class Editable_Text(ft.Row):
     def __init__(self,value:str):
         super().__init__()
@@ -119,6 +147,7 @@ def main(page: ft.Page):
     add_bottun=ft.FloatingActionButton(icon=ft.icons.ADD, on_click=add_clicked)
     run_bottun=ft.FloatingActionButton(icon=ft.icons.RUN_CIRCLE, on_click=run_clicked)
     delete_bottun=ft.FloatingActionButton(icon=ft.icons.DELETE, on_click=delete_clicked)
+    page.add(Edit_Database())
     page.add(new_task)
     page.add(ft.Row([add_bottun,run_bottun,delete_bottun]))
     colum=ft.Column()
