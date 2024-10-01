@@ -109,13 +109,14 @@ def run_papnt_doi(now_text:Editable_Text):
     # print("now is done")
 def main(page: ft.Page):
     def add_clicked(e):
-        colum.controls.append(Editable_Text(value=new_task.value))
+        colum.controls.insert(0,Editable_Text(value=new_task.value))
         new_task.value = ""
         page.update()
         new_task.focus()
     def delete_clicked(e):
         colum.clean()
         page.update()
+        new_task.focus()
     #Enterキーを押されたら文字を加える.
     def add_entered(e:ft.OptionalEventCallable):
         add_clicked(e)
@@ -152,5 +153,7 @@ def main(page: ft.Page):
     page.add(ft.Row([add_bottun,run_bottun,delete_bottun]))
     colum=ft.Column()
     page.add(colum)
+    page.scroll = ft.ScrollMode.HIDDEN
+    new_task.focus()
 
 ft.app(target=main)
