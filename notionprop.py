@@ -90,6 +90,8 @@ class NotionPropMaker:
             client=arxiv.Client()
             serch=arxiv.Search(id_list=[doi2])
             reslut=next(client.results(serch))
+            if reslut.doi is not None:
+                return self._fetch_info_from_doi(reslut.doi)
             info=reslut
             # info["author"]=info["authors"]
             flag_arxiv=True
