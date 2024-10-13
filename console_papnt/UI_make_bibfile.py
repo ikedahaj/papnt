@@ -136,4 +136,9 @@ class Edit_Database(ft.Row):
             self.config.write(configfile, True)
         self.update()
 
-view_bib_maker=ft.View("/make_bib_file",controls=[ft.AppBar(title=ft.Text("make_bib_file"))])
+class view_bib_maker(ft.View):
+    def __init__(self):
+        super().__init__()
+        self.route="/make_bib_file"
+        self.appbar=ft.AppBar(title=ft.Text("make_bib_file"))
+        self.controls.append(Edit_Database())
