@@ -8,11 +8,14 @@ import configparser
 
 import papnt
 
+import papnt.misc
+
 # doiからnotionに論文情報を追加する;
 def __create_records_from_doi(doi:str):
     dbinfo=papnt.database.DatabaseInfo()
     database=papnt.database.Database(dbinfo)
-    prop = papnt.notionprop.NotionPropMaker().from_doi(doi,dbinfo.propnames)
+    path_config=papnt.__path__[0]+"/config.ini"
+    prop = papnt.misc.load_config(path_config)
     prop |= {'info': {'checkbox': True}}
     try:
         database.create(prop)
@@ -37,7 +40,7 @@ def __format_doi(doi:str)->str:
     return doi
 
 # データベースにトークンキーとデータベースIDを追加するところ;
-class __Edit_Database(ft.Row):
+class _Edit_Database(ft.Row):
     def __init__(self):
         super().__init__()
         self.ED_path_config=papnt.__path__[0]+"/config.ini"
@@ -69,12 +72,12 @@ class __Edit_Database(ft.Row):
 #       1.編集するためのボタン
 #       2.テキストを消すボタン
 #       3.１行だけ実行するボタン　がある;
-class __Editable_Text(ft.Row):
-    def __init__(self,value:str):
+class _Editable_Text(ft.Row):
+    def __init__(self,input_value:str):
         super().__init__()
-        self.value=value
+        self.value=input_value
         self.ET_text=ft.Text()
-        self.ET_text.value=value
+        self.ET_text.value=input_value
         ET_button_edit=ft.IconButton(icon=ft.icons.EDIT,on_click=self.__ET_clicked_text_edit)
         ET_button_run=ft.IconButton(icon=ft.icons.RUN_CIRCLE,on_click=self.__ET_clicked_run_papnt)
         ET_button_delete=ft.IconButton(icon=ft.icons.DELETE,on_click=self.__ET_clicked_text_delete)
@@ -103,32 +106,32 @@ class __Editable_Text(ft.Row):
         self.controls=saved
         # self.controls[0].value=self.value
         self.update()
-    def update_value(self,mode:typing.Literal["processing","error","succeed","warn"],value:str=""):
+    def update_value(self,mode:typing.Literal["processing","error","succeed","warn"],input_value:str=""):
         def change_bgcolor(color):
             self.controls[0].bgcolor=color
-        def change_text(value:str):
-            self.value=value
-            self.controls[0].value=value
+        def change_text(input_value:str):
+            self.value=input_value
+            self.controls[0].value=input_value
         match mode:
             case "processing":
-                if value=="":
-                    change_text(value)
-                else:
+                if input_value=="":
                     change_text("processing...")
+                else:
+                    change_text(input_value)
                 change_bgcolor(None)
             case "error":
-                change_text(value)
+                change_text(input_value)
                 change_bgcolor(ft.colors.RED)
             case "succeed":
-                change_text(value)
+                change_text(input_value)
                 change_bgcolor(ft.colors.GREEN)
             case "warn":
-                change_text(value)
+                change_text(input_value)
                 change_bgcolor(ft.colors.YELLOW)
         self.update()
 
 # テキスト１行のdoiからnotionに情報を追加する;
-def __run_papnt_doi(now_text:__Editable_Text):
+def __run_papnt_doi(now_text:_Editable_Text):
     doi=now_text.value
     if "Already added" in doi or "Done" in doi or "processing..." in doi or "Error" in doi:
         return
@@ -157,8 +160,9 @@ class View_input_doi(ft.View):
     def __init__(self):
         super().__init__()
         def add_clicked(e):
-            list_doi.controls.insert(0,__Editable_Text(value=input_text_doi.value))
+            list_doi.controls.insert(0,_Editable_Text(value=input_text_doi.value))
             input_text_doi.value = ""
+            list_doi.update()
             self.update()
             input_text_doi.focus()
         def delete_clicked(e):
@@ -181,7 +185,7 @@ class View_input_doi(ft.View):
         list_doi=ft.Column()
         # 画面に追加する;
         self.controls.append(ft.Row([ft.Text("　論文追加",theme_style=ft.TextThemeStyle.HEADLINE_LARGE,weight=ft.FontWeight.W_900)],alignment=ft.MainAxisAlignment.SPACE_BETWEEN,height=50))
-        self.controls.append(__Edit_Database())
+        self.controls.append(_Edit_Database())
         self.controls.append(ft.Row([input_text_doi,add_button],alignment=ft.MainAxisAlignment.SPACE_BETWEEN))
         self.controls.append(ft.Row([run_button,delete_button]))
         self.controls.append(list_doi)
