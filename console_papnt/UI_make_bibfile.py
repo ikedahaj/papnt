@@ -21,7 +21,7 @@ def sort_strings(A, B):
     # Return the concatenated list, with starts_with_B_sorted first
     return starts_with_B_sorted + does_not_start_with_B_sorted
 
-class Text_Select(ft.Row):
+class _Text_Select(ft.Row):
     def __init__(self,text_list:list):
         super().__init__()
         # anchor=ft.SearchBar()
@@ -48,11 +48,10 @@ class Text_Select(ft.Row):
         self.controls[2].visible=False
         # self.update()
     def __TS_update_listview(self,texts_list):
-        print(self.__TS_listview.controls)
         # self.__TS_listview.clean()
         new_controls=[]
         for name in texts_list:
-            new_controls.insert(0,ft.ListTile(title=ft.Text(name),on_click=self.__close_anchor))
+            new_controls.append(ft.ListTile(title=ft.Text(name),on_click=self.__close_anchor))
         self.__TS_listview.controls=new_controls
         print(self.__TS_listview.controls)
     def __close_anchor(self,e):
@@ -73,23 +72,19 @@ class Text_Select(ft.Row):
         self.update()
     def __handle_submit(self,e):
         new_text=self.controls[0].value
-        print(new_text)
         if new_text not in self.__text_list:
             self.__text_list.insert(0,new_text)
             self.__TS_listview.controls.insert(0,ft.ListTile(title=ft.Text(new_text),on_click=self.__close_anchor))
             # self.controls[0].controls=[self.__TS_listview]
         if self.__TS_serBar.data:
-            print(new_text)
             # self.__TS_serBar.close_view(new_text)
             self.controls[0].close_view(new_text)
             self.__TS_serBar.data=False
             self.update()
             import time
             time.sleep(0.1)
-            print("closed")
             self.__handle_submit(e)
             return
-        print("after")
         self.controls[0].visible=False
         self.controls[1].visible=True
         self.controls[2].visible=True
@@ -105,7 +100,7 @@ class Text_Select(ft.Row):
         self.__TS_serBar.open_view()
         self.__TS_serBar.data=True
 
-class Edit_Database(ft.Row):
+class _Edit_Database(ft.Row):
     def __init__(self):
         super().__init__()
         self.ED_path_config=papnt.__path__[0]+"/config.ini"
@@ -135,10 +130,19 @@ class Edit_Database(ft.Row):
         with open(self.ED_path_config, "w") as configfile:
             self.config.write(configfile, True)
         self.update()
+class _Text_Bib_List(ft.Row):
+    def __init__(self,text_value,notion_page,delete_clicked):
+        super().__init__()
+        self.data=notion_page
+        self.controls=[ft.Text(value=text_value),ft.FloatingActionButton(icon=ft.icons.DELETE,on_click=delete_clicked)]
+
+
 
 class view_bib_maker(ft.View):
     def __init__(self):
         super().__init__()
         self.route="/make_bib_file"
         self.appbar=ft.AppBar(title=ft.Text("make_bib_file"))
-        self.controls.append(Edit_Database())
+        self.controls.append(_Edit_Database())
+        lists=["momo","apple","ringo","painappuru","pineapple","banana","mondai"]
+        self.controls.append(_Text_Select(lists))
