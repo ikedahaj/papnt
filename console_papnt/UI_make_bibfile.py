@@ -1,26 +1,105 @@
+import typing
+import time
 import flet as ft
 import configparser
 import papnt
 
-# Python code to sort a list of strings A based on the rules provided
-def sort_strings(A, B):
-    # Split the list into two groups: strings that start with B and others
-    
-    starts_with_B = []
-    does_not_start_with_B = []
-    for str in A:
-        if str.lower().startswith(B.lower()):
-            starts_with_B.append(str)
-        else :
-            does_not_start_with_B.append(str)
-    
-    # Sort both groups, starts_with_B in lexicographical order
-    starts_with_B_sorted = sorted(starts_with_B)
-    does_not_start_with_B_sorted = sorted(does_not_start_with_B)
-    
-    # Return the concatenated list, with starts_with_B_sorted first
-    return starts_with_B_sorted + does_not_start_with_B_sorted
+import papnt.database
 
+import papnt.misc
+
+# Python code to sort a list of strings A based on the rules provided
+def _access_notion_prop(value_props):
+    mode=value_props["type"]
+    match mode:
+        case "title":
+            return value_props["title"][0]["text"]["content"]
+        case "select":
+            return value_props["select"]["name"]
+        case "multi_select":
+            connected_lists=""
+            for name in value_props["multi_select"]:
+                connected_lists+=name["name"]
+                connected_lists+=","
+            return connected_lists
+        case "rich_text":
+            return value_props["rich_text"][0]["plain_text"]
+        case "number":
+            return value_props["number"]
+        case "url":
+            return value_props["url"]
+        case _:
+            raise ValueError('Invalid mode')
+
+def _access_notion_prop_value(prop_page,prop):
+    page_prop=prop_page["properties"]
+    return _access_notion_prop(page_prop[prop])
+
+class _Papers_List(ft.SearchBar):
+    def __init__(self,input_list:list,add_list):
+        """bibに追加する論文を選択するための入力フォーム
+
+        Args:
+            input_list (list): 未選択の要素。notionの"results"をそのまま入れる
+            add_list (function): 要素を下に追加する関数。第一引数に表示するテキスト、第二引数にnotionのresultをとる
+        """
+        super().__init__()
+        # anchor=ft.SearchBar()
+        self.__PL_init_list=input_list
+        self.__PL_select_flag="Name"
+        self.__PL_listview=ft.ListView(controls=[ft.ListTile(title= ft.Text(_access_notion_prop_value(name,self.__PL_select_flag)),data=name,on_click=self.__close_anchor) for name in input_list])
+        self.view_elevation=4
+        self.controls=[self.__PL_listview]
+        self.bar_hint_text="bibファイルに加える論文を選択"
+        self.view_hint_text=self.bar_hint_text
+        self.autofocus=True
+        self.on_tap=self.__handle_tap
+        self.on_change=self.__PL_handle_change
+        self.__PL_add_list_to_out=add_list
+    def __PL_sort_strings(self, B):
+        starts_with_B = []
+        includes_B=[]
+        does_not_start_with_B = []
+        for str in self.__PL_listview.controls:
+            if str.title.value.lower().startswith(B.lower()):
+                starts_with_B.append(str)
+            elif B.lower() in str.title.value.lower():
+                includes_B.append(str)
+            else :
+                does_not_start_with_B.append(str)
+        self.__PL_listview.controls= starts_with_B+includes_B + does_not_start_with_B
+    def __PL_update_listview(self,texts_list):
+        self.__PL_listview.clean()
+        new_controls=[]
+        for name in texts_list:
+            new_controls.append(ft.ListTile(title=ft.Text(_access_notion_prop_value(name,self.__PL_select_flag)),on_click=self.__close_anchor,data=name))
+        self.__PL_listview.controls=new_controls
+    def __close_anchor(self,e):
+        text=e.control.title.value
+        self.close_view(text)
+        time.sleep(0.05)
+        datas=e.control.data
+        print(datas)
+        self.__PL_add_list_to_out(text,datas)
+        self.__PL_listview.controls.remove(e.control)
+        self.__PL_init_list.remove(datas)
+        self.value=None
+        self.update()
+    def __handle_tap(self,e):
+        self.open_view()
+    def __PL_handle_change(self,e):
+        self.__PL_sort_strings(e.data)
+        if e.data=="":
+            self.__PL_update_listview(self.__PL_init_list)
+        self.update()
+    def PL_change_prop_name(self,propname):
+        self.__PL_select_flag=propname
+        for name in self.__PL_listview.controls:
+            name.title.value=_access_notion_prop_value(name.data,propname)
+        self.update()
+    def add_new_props(self,new_prop):
+        self.__PL_init_list.insert(0,new_prop)
+        self.__PL_listview.controls.insert(0,ft.ListTile(title=ft.Text(_access_notion_prop_value(new_prop,self.__PL_select_flag)),on_click=self.__close_anchor,data=new_prop))
 class _Text_Select(ft.Row):
     def __init__(self,text_list:list):
         super().__init__()
@@ -28,19 +107,6 @@ class _Text_Select(ft.Row):
         self.__TS_listview=ft.ListView()
         self.__text_list=text_list
         self.__TS_listview=ft.ListView(controls=[ft.ListTile(title= ft.Text(name),on_click=self.__close_anchor) for name in text_list])
-        # for name in text_list:
-        #     TS_listview.controls.append(ft.ListTile(ft.Text(name),on_click=close_anchor))
-        # TS_update_listview(text_list)
-        self.__TS_serBar=ft.SearchBar(
-            view_elevation=4,
-            on_tap=self.__handle_tap,
-            on_change=self.__handle_change,
-            bar_hint_text="Cite key",
-            view_hint_text="Cite_key",
-            autofocus=True,
-            controls=[self.__TS_listview],
-            on_submit=self.__handle_submit,
-            )
         text=ft.Text()
         button=ft.FloatingActionButton(icon=ft.icons.EDIT,mini=True,on_click=self.__reset_anchor)
         self.controls=[self.__TS_serBar,text,button]
@@ -144,5 +210,44 @@ class view_bib_maker(ft.View):
         self.route="/make_bib_file"
         self.appbar=ft.AppBar(title=ft.Text("make_bib_file"))
         self.controls.append(_Edit_Database())
-        lists=["momo","apple","ringo","painappuru","pineapple","banana","mondai"]
-        self.controls.append(_Text_Select(lists))
+
+        path_config=papnt.__path__[0]+"/config.ini"
+        notion_configs=papnt.misc.load_config(path_config)
+        self.select_prop_flag=ft.Dropdown(value="Name",width=150)
+
+        self.database=papnt.database.Database(papnt.database.DatabaseInfo())
+        response=self.database.notion.databases.query(self.database.database_id)
+        self.results=response["results"]
+
+        self.Paper_list=ft.Column()
+
+        self._input_Paper_List=_Papers_List(self.results,self._add_Paper_list)
+        self.select_prop_flag.on_change=self._dropdown_changed
+        self.select_prop_flag.options=[ft.dropdown.Option(key=propname) for propname in notion_configs["propnames"].values()]
+        self.select_prop_flag.options.insert(0,ft.dropdown.Option(key="Name"))
+        self._input_Paper_List.bar_leading=self.select_prop_flag
+
+        self.controls.append(self._input_Paper_List)
+        self.controls.append(self.Paper_list)
+    def _change_prop_name(self,propname):
+        for item in self.Paper_list.controls:
+            item.controls[0].value=_access_notion_prop_value(item.controls[0].data,propname)
+        self.Paper_list.update()
+        self._input_Paper_List.PL_change_prop_name(propname)
+    def _delete_text(self,text_row:ft.Row):
+        text=text_row.controls[0]
+        self._input_Paper_List.add_new_props(text.data)
+        text_row.clean()
+        self.Paper_list.update()
+
+    def _add_Paper_list(self,text_value,notion_result):
+        text=ft.Text(text_value,data=notion_result)
+        del_button=ft.FloatingActionButton(icon=ft.icons.DELETE)
+        add_text_list=ft.Row(controls=[text,del_button])
+        def delete_clicked(e):
+            self._delete_text(add_text_list)
+        add_text_list.controls[1].on_click=delete_clicked
+        self.Paper_list.controls.insert(0,add_text_list)
+        self.Paper_list.update()
+    def _dropdown_changed(self,e):
+        self._change_prop_name(e.data)
