@@ -5,8 +5,10 @@ import configparser
 import papnt
 
 import papnt.database
-
+import papnt.cli
 import papnt.misc
+import papnt.mainfunc
+
 
 # Python code to sort a list of strings A based on the rules provided
 def _access_notion_prop(value_props):
@@ -79,7 +81,7 @@ class _Papers_List(ft.SearchBar):
         self.close_view(text)
         time.sleep(0.05)
         datas=e.control.data
-        print(datas)
+        # print(datas)
         self.__PL_add_list_to_out(text,datas)
         self.__PL_listview.controls.remove(e.control)
         self.__PL_init_list.remove(datas)
@@ -100,71 +102,96 @@ class _Papers_List(ft.SearchBar):
     def add_new_props(self,new_prop):
         self.__PL_init_list.insert(0,new_prop)
         self.__PL_listview.controls.insert(0,ft.ListTile(title=ft.Text(_access_notion_prop_value(new_prop,self.__PL_select_flag)),on_click=self.__close_anchor,data=new_prop))
-class _Text_Select(ft.Row):
+class _Bib_File_Name(ft.Row):
     def __init__(self,text_list:list):
         super().__init__()
         # anchor=ft.SearchBar()
-        self.__TS_listview=ft.ListView()
+        self.value=""
+        self.__BFN_listview=ft.ListView()
         self.__text_list=text_list
-        self.__TS_listview=ft.ListView(controls=[ft.ListTile(title= ft.Text(name),on_click=self.__close_anchor) for name in text_list])
-        text=ft.Text()
-        button=ft.FloatingActionButton(icon=ft.icons.EDIT,mini=True,on_click=self.__reset_anchor)
-        self.controls=[self.__TS_serBar,text,button]
+        self.__BFN_listview=ft.ListView(controls=[ft.ListTile(title= ft.Text(name),on_click=self.__close_anchor) for name in text_list])
+        self.__BFN_serBar=ft.SearchBar(
+        view_elevation=4,
+        divider_color=ft.colors.AMBER,
+        bar_hint_text="出力するbibファイルのファイル名",
+        view_hint_text="ファイル名を選択",
+        on_change=self.__handle_change,
+        on_submit=self.__handle_submit,
+        on_tap=self.__handle_tap,
+        controls=[self.__BFN_listview],
+    )
+        text=ft.Text(visible=False,value="bibファイル名を入力")
+        button=ft.FloatingActionButton(icon=ft.icons.EDIT,mini=True,on_click=self.__reset_anchor,visible=False)
+        self.controls=[self.__BFN_serBar,text,button]
+        self.__BFN_invisible_input()
+        # self.update()
+    def __BFN_visible_input(self):
+        self.controls[0].visible=True
         self.controls[1].visible=False
         self.controls[2].visible=False
-        # self.update()
-    def __TS_update_listview(self,texts_list):
-        # self.__TS_listview.clean()
+    def __BFN_invisible_input(self):
+        self.controls[0].visible=False
+        self.controls[1].visible=True
+        self.controls[2].visible=True
+
+    def __BFN_update_listview(self,texts_list):
+        # self.__BFN_listview.clean()
         new_controls=[]
         for name in texts_list:
             new_controls.append(ft.ListTile(title=ft.Text(name),on_click=self.__close_anchor))
-        self.__TS_listview.controls=new_controls
-        print(self.__TS_listview.controls)
+        self.__BFN_listview.controls=new_controls
     def __close_anchor(self,e):
         text=e.control.title.value
-        self.__TS_serBar.close_view(text)
-        self.__TS_serBar.data=False
+        self.__BFN_serBar.close_view(text)
+        self.__BFN_serBar.data=False
         import time
-        time.sleep(0.1)
+        time.sleep(0.05)
         self.__handle_submit(e)
     def __handle_tap(self,e):
-        self.__TS_serBar.open_view()
-        self.__TS_serBar.data=True
+        self.__BFN_serBar.open_view()
+        self.__BFN_serBar.data=True
     def __handle_change(self,e):
-        strings2=sort_strings(self.__text_list,e.data)
+        def divide_lists(list,head_text:str):
+            match_head=[]
+            not_match_head=[]
+            for name in list:
+                if name.lower().startswith(head_text.lower()):
+                    match_head.append(name)
+                else:
+                    not_match_head.append(name)
+            return match_head+not_match_head
         if e.data=="":
             strings2=self.__text_list
-        self.__TS_update_listview(strings2)
+        else:
+            strings2=divide_lists(self.__text_list,e.data)
+        self.__BFN_update_listview(strings2)
         self.update()
     def __handle_submit(self,e):
         new_text=self.controls[0].value
         if new_text not in self.__text_list:
             self.__text_list.insert(0,new_text)
-            self.__TS_listview.controls.insert(0,ft.ListTile(title=ft.Text(new_text),on_click=self.__close_anchor))
-            # self.controls[0].controls=[self.__TS_listview]
-        if self.__TS_serBar.data:
-            # self.__TS_serBar.close_view(new_text)
+            self.__BFN_listview.controls.insert(0,ft.ListTile(title=ft.Text(new_text),on_click=self.__close_anchor))
+            # self.controls[0].controls=[self.__BFN_listview]
+        if self.__BFN_serBar.data:
+            # self.__BFN_serBar.close_view(new_text)
             self.controls[0].close_view(new_text)
-            self.__TS_serBar.data=False
+            self.__BFN_serBar.data=False
             self.update()
             import time
-            time.sleep(0.1)
+            time.sleep(0.05)
             self.__handle_submit(e)
             return
-        self.controls[0].visible=False
-        self.controls[1].visible=True
-        self.controls[2].visible=True
+        self.__BFN_invisible_input()
         self.controls[1].value=new_text
         self.update()
+        self.value=new_text
     def __reset_anchor(self,e):
-        # self.__TS_serBar.controls=[self.__TS_listview]
-        self.controls[0].visible=True
-        self.controls[1].visible=False
-        self.controls[2].visible=False
+        # self.__BFN_serBar.controls=[self.__BFN_listview]
+        self.__BFN_visible_input()
         self.update()
-        # self.__TS_update_listview(self.__text_list)
-        self.__TS_serBar.open_view()
-        self.__TS_serBar.data=True
+        # self.__BFN_update_listview(self.__text_list)
+        self.__BFN_serBar.open_view()
+        self.__BFN_serBar.data=True
 
 class _Edit_Database(ft.Row):
     def __init__(self):
@@ -172,12 +199,12 @@ class _Edit_Database(ft.Row):
         self.ED_path_config=papnt.__path__[0]+"/config.ini"
         self.config=configparser.ConfigParser(comment_prefixes='/', allow_no_value=True)
         self.config.read(self.ED_path_config)
-        ED_text_dir_save_bibfile_decided=ft.Text(value=self.config["misc"]["dir_save_bib"])
-        ED_button_edit=ft.FloatingActionButton(icon=ft.icons.EDIT,on_click=self.ED_clicked_text_edit,mini=True)
+        ED_text_dir_save_bibfile_decided=ft.Text(value=self.config["misc"]["dir_save_bib"],expand=True)
+        ED_button_edit=ft.FloatingActionButton(icon=ft.icons.EDIT,on_click=self.__ED_clicked_text_edit,mini=True)
         ED_text_dir_save_bibfile_input=ft.TextField(value=ED_text_dir_save_bibfile_decided.value,hint_text="dirname of bib file",visible=False)
-        ED_button_done_edit=ft.FloatingActionButton(icon=ft.icons.DONE,on_click=self.ED_clicked_done_edit,mini=True,visible=False)
+        ED_button_done_edit=ft.FloatingActionButton(icon=ft.icons.DONE,on_click=self.__ED_clicked_done_edit,mini=True,visible=False)
         self.controls=[ED_text_dir_save_bibfile_decided, ED_button_edit,ED_text_dir_save_bibfile_input,ED_button_done_edit]
-    def ED_clicked_text_edit(self,e):
+    def __ED_clicked_text_edit(self,e):
         self.controls[0].visible=False
         self.controls[1].visible=False
         self.controls[2].visible=True
@@ -185,7 +212,7 @@ class _Edit_Database(ft.Row):
         self.controls[2].value=self.controls[0].value
         self.update()
 
-    def ED_clicked_done_edit(self,e):
+    def __ED_clicked_done_edit(self,e):
         self.controls[0].visible=True
         self.controls[1].visible=True
         self.controls[2].visible=False
@@ -196,12 +223,6 @@ class _Edit_Database(ft.Row):
         with open(self.ED_path_config, "w") as configfile:
             self.config.write(configfile, True)
         self.update()
-class _Text_Bib_List(ft.Row):
-    def __init__(self,text_value,notion_page,delete_clicked):
-        super().__init__()
-        self.data=notion_page
-        self.controls=[ft.Text(value=text_value),ft.FloatingActionButton(icon=ft.icons.DELETE,on_click=delete_clicked)]
-
 
 
 class view_bib_maker(ft.View):
@@ -209,25 +230,36 @@ class view_bib_maker(ft.View):
         super().__init__()
         self.route="/make_bib_file"
         self.appbar=ft.AppBar(title=ft.Text("make_bib_file"))
-        self.controls.append(_Edit_Database())
 
+        #コンフィグファイルとnotionデータベースの準備;
         path_config=papnt.__path__[0]+"/config.ini"
-        notion_configs=papnt.misc.load_config(path_config)
-        self.select_prop_flag=ft.Dropdown(value="Name",width=150)
+        self.__notion_configs=papnt.misc.load_config(path_config)
 
         self.database=papnt.database.Database(papnt.database.DatabaseInfo())
         response=self.database.notion.databases.query(self.database.database_id)
         self.results=response["results"]
 
-        self.Paper_list=ft.Column()
+        #基礎設定:データベースの設定;
+        filename_list=[]
+        for name in self.results:
+            next_list=name["properties"][self.__notion_configs["propnames"]["output_target"]]["multi_select"]
+            for next_name in next_list:
+                if not next_name in filename_list:
+                    filename_list.append(next_name["name"])
+        self._Bib_Name=_Bib_File_Name(filename_list)
+        self.controls.append(ft.Row(controls=[_Edit_Database(),self._Bib_Name],alignment=ft.MainAxisAlignment.SPACE_BETWEEN))
 
+        #構成要素：入力とか;
+        self.select_prop_flag=ft.Dropdown(value="Name",width=150)
+        self.Paper_list=ft.Column()
         self._input_Paper_List=_Papers_List(self.results,self._add_Paper_list)
         self.select_prop_flag.on_change=self._dropdown_changed
-        self.select_prop_flag.options=[ft.dropdown.Option(key=propname) for propname in notion_configs["propnames"].values()]
+        self.select_prop_flag.options=[ft.dropdown.Option(key=propname) for propname in self.__notion_configs["propnames"].values()]
         self.select_prop_flag.options.insert(0,ft.dropdown.Option(key="Name"))
         self._input_Paper_List.bar_leading=self.select_prop_flag
-
+        self.run_button=ft.FilledButton("bibファイルを出力する",on_click=self.__makebib(self._Bib_Name.value))
         self.controls.append(self._input_Paper_List)
+        self.controls.append(self.run_button)
         self.controls.append(self.Paper_list)
     def _change_prop_name(self,propname):
         for item in self.Paper_list.controls:
@@ -251,3 +283,11 @@ class view_bib_maker(ft.View):
         self.Paper_list.update()
     def _dropdown_changed(self,e):
         self._change_prop_name(e.data)
+    def __makebib(self,target: str):
+        """Make BIB file including reference information from database"""
+        papnt.mainfunc.make_bibfile_from_records(
+            self.database, target, self.__notion_configs['propnames'],
+            self.__notion_configs['misc']['dir_save_bib'])
+        papnt.mainfunc.make_abbrjson_from_bibpath(
+            f'{self.__notion_configs["misc"]["dir_save_bib"]}/{target}.bib',
+            self.__notion_configs['abbr'])
