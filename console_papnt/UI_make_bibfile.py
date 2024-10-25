@@ -102,19 +102,22 @@ class _Papers_List(ft.SearchBar):
     def add_new_props(self,new_prop):
         self.__PL_init_list.insert(0,new_prop)
         self.__PL_listview.controls.insert(0,ft.ListTile(title=ft.Text(_access_notion_prop_value(new_prop,self.__PL_select_flag)),on_click=self.__close_anchor,data=new_prop))
+    def PL_get_init_list(self)->typing.List[dict]:
+        return self.__PL_init_list
 class _Bib_File_Name(ft.Row):
-    def __init__(self,text_list:list):
+    def __init__(self,text_list:list,add_Paper_List_New_Cite_in_prop):
         super().__init__()
         # anchor=ft.SearchBar()
-        self.value=""
+        self.value=None
+        self.__funk_add_Paper_List_update_prop=add_Paper_List_New_Cite_in_prop
         self.__BFN_listview=ft.ListView()
         self.__text_list=text_list
         self.__BFN_listview=ft.ListView(controls=[ft.ListTile(title= ft.Text(name),on_click=self.__close_anchor) for name in text_list])
         self.__BFN_serBar=ft.SearchBar(
         view_elevation=4,
         divider_color=ft.colors.AMBER,
-        bar_hint_text="出力するbibファイルのファイル名",
-        view_hint_text="ファイル名を選択",
+        bar_hint_text="bibファイル名を入力",
+        view_hint_text="bibファイル名を入力",
         on_change=self.__handle_change,
         on_submit=self.__handle_submit,
         on_tap=self.__handle_tap,
@@ -123,7 +126,7 @@ class _Bib_File_Name(ft.Row):
         text=ft.Text(visible=False,value="bibファイル名を入力")
         button=ft.FloatingActionButton(icon=ft.icons.EDIT,mini=True,on_click=self.__reset_anchor,visible=False)
         self.controls=[self.__BFN_serBar,text,button]
-        self.__BFN_invisible_input()
+        self.__BFN_visible_input()
         # self.update()
     def __BFN_visible_input(self):
         self.controls[0].visible=True
@@ -185,6 +188,8 @@ class _Bib_File_Name(ft.Row):
         self.controls[1].value=new_text
         self.update()
         self.value=new_text
+        self.__funk_add_Paper_List_update_prop(self.value)
+        pass
     def __reset_anchor(self,e):
         # self.__BFN_serBar.controls=[self.__BFN_listview]
         self.__BFN_visible_input()
@@ -244,9 +249,9 @@ class view_bib_maker(ft.View):
         for name in self.results:
             next_list=name["properties"][self.__notion_configs["propnames"]["output_target"]]["multi_select"]
             for next_name in next_list:
-                if not next_name in filename_list:
+                if not next_name["name"] in filename_list:
                     filename_list.append(next_name["name"])
-        self._Bib_Name=_Bib_File_Name(filename_list)
+        self._Bib_Name=_Bib_File_Name(filename_list,self.add_Paper_List_New_Cite_in_prop)
         self.controls.append(ft.Row(controls=[_Edit_Database(),self._Bib_Name],alignment=ft.MainAxisAlignment.SPACE_BETWEEN))
 
         #構成要素：入力とか;
@@ -257,7 +262,7 @@ class view_bib_maker(ft.View):
         self.select_prop_flag.options=[ft.dropdown.Option(key=propname) for propname in self.__notion_configs["propnames"].values()]
         self.select_prop_flag.options.insert(0,ft.dropdown.Option(key="Name"))
         self._input_Paper_List.bar_leading=self.select_prop_flag
-        self.run_button=ft.FilledButton("bibファイルを出力する",on_click=self.__makebib(self._Bib_Name.value))
+        self.run_button=ft.FilledButton("bibファイルを出力する",on_click=self.__makebib)
         self.controls.append(self._input_Paper_List)
         self.controls.append(self.run_button)
         self.controls.append(self.Paper_list)
@@ -283,11 +288,42 @@ class view_bib_maker(ft.View):
         self.Paper_list.update()
     def _dropdown_changed(self,e):
         self._change_prop_name(e.data)
-    def __makebib(self,target: str):
+    def add_Paper_List_New_Cite_in_prop(self,new_cite_in_value):
+        #全てのリストから加えていないものを見つける
+        un_added_list=self._input_Paper_List.PL_get_init_list()
+        for un_added_paper in un_added_list:
+            if any([cite_in_item["name"]==new_cite_in_value for cite_in_item in un_added_paper["properties"][self.__notion_configs["propnames"]["output_target"]]["multi_select"]]):
+                self._add_Paper_list(_access_notion_prop_value(un_added_paper,self.select_prop_flag.value),un_added_paper)
+
+    def __makebib(self,e):
+        #notionのCite in にデータを追加する;
+        print("hel")
+        bib_name=self._Bib_Name.value
+        items:type[ft.Row]
+        for items in self.Paper_list.controls:#ft.Row(controls=[ft.Text,ft.FloatingActionButton])
+            notion_page=items.controls[0].data
+            # print(notion_page)
+            cite_in_items=[{"name":cite_in_item["name"]} for cite_in_item in notion_page["properties"][self.__notion_configs["propnames"]["output_target"]]["multi_select"]]
+            next_dict={"name":bib_name}
+            if not next_dict in cite_in_items:
+                cite_in_items.append(next_dict)
+                next_prop={self.__notion_configs["propnames"]["output_target"]:{
+                    "multi_select":cite_in_items
+                    }
+                }
+                try:
+                    self.database.update(notion_page["id"],next_prop)
+                except:
+                    import sys
+                    exc= sys.exc_info()
+                    print(str(exc[1]))
+                print("reached")
+
+
         """Make BIB file including reference information from database"""
         papnt.mainfunc.make_bibfile_from_records(
-            self.database, target, self.__notion_configs['propnames'],
+            self.database,bib_name, self.__notion_configs['propnames'],
             self.__notion_configs['misc']['dir_save_bib'])
-        papnt.mainfunc.make_abbrjson_from_bibpath(
-            f'{self.__notion_configs["misc"]["dir_save_bib"]}/{target}.bib',
-            self.__notion_configs['abbr'])
+        # papnt.mainfunc.make_abbrjson_from_bibpath(
+        #     f'{self.__notion_configs["misc"]["dir_save_bib"]}/{target}.bib',
+        #     self.__notion_configs['abbr'])

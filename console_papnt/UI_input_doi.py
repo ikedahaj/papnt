@@ -96,7 +96,7 @@ class _Editable_Text(ft.Row):
         self.clean()
 
     def __ET_clicked_run_papnt(self,e):
-        __run_papnt_doi(self)
+        _run_papnt_doi(self)
 
     def __ET_clicked_done_edit(self,e):
         saved=self.data
@@ -131,7 +131,7 @@ class _Editable_Text(ft.Row):
         self.update()
 
 # テキスト１行のdoiからnotionに情報を追加する;
-def __run_papnt_doi(now_text:_Editable_Text):
+def _run_papnt_doi(now_text:_Editable_Text):
     doi=now_text.value
     if "Already added" in doi or "Done" in doi or "processing..." in doi or "Error" in doi:
         return
@@ -160,7 +160,7 @@ class View_input_doi(ft.View):
     def __init__(self):
         super().__init__()
         def add_clicked(e):
-            list_doi.controls.insert(0,_Editable_Text(value=input_text_doi.value))
+            list_doi.controls.insert(0,_Editable_Text(input_value=input_text_doi.value))
             input_text_doi.value = ""
             list_doi.update()
             self.update()
@@ -170,11 +170,11 @@ class View_input_doi(ft.View):
             self.update()
             input_text_doi.focus()
         #Enterキーを押されたら文字を加える.
-        def add_entered(e:ft.OptionalEventCallable):
+        def add_entered(e):
             add_clicked(e)
         def run_clicked(e):
             for input_doi in list_doi.controls:
-                __run_papnt_doi(input_doi)
+                _run_papnt_doi(input_doi)
 
         self.route="/"
         self.auto_scroll=True
