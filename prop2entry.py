@@ -78,5 +78,6 @@ def notionprop_to_entry(notionprop: Dict, propname_to_bibname: Dict
         doi = _extr_propvalue(props['doi'], 'rich_text'),
         publisher = _extr_propvalue(props['publisher'], 'select'),
         howpublished = _extr_propvalue(props['howpublished'], 'rich_text'),
+        number = _extr_propvalue(props["number"],'rich_text'),
     )
     return {key: val for key, val in entry.items() if val is not None}
