@@ -297,7 +297,9 @@ class view_bib_maker(ft.View):
 
     def __makebib(self,e):
         #notionのCite in にデータを追加する;
-        print("hel")
+        self.run_button.text="実行中..."
+        self.run_button.style=ft.ButtonStyle(bgcolor=ft.colors.GREEN,shape=ft.RoundedRectangleBorder(radius=1))
+        self.update()
         bib_name=self._Bib_Name.value
         items:type[ft.Row]
         for items in self.Paper_list.controls:#ft.Row(controls=[ft.Text,ft.FloatingActionButton])
@@ -317,13 +319,26 @@ class view_bib_maker(ft.View):
                     import sys
                     exc= sys.exc_info()
                     print(str(exc[1]))
+                    self.run_button.text=str(exc[1])
+                    self.run_button.style=ft.ButtonStyle(bgcolor=ft.colors.RED)
+                    self.update()
                 print("reached")
 
 
         """Make BIB file including reference information from database"""
-        papnt.mainfunc.make_bibfile_from_records(
-            self.database,bib_name, self.__notion_configs['propnames'],
-            self.__notion_configs['misc']['dir_save_bib'])
-        # papnt.mainfunc.make_abbrjson_from_bibpath(
-        #     f'{self.__notion_configs["misc"]["dir_save_bib"]}/{target}.bib',
-        #     self.__notion_configs['abbr'])
+        try:
+            papnt.mainfunc.make_bibfile_from_records(
+                self.database,bib_name, self.__notion_configs['propnames'],
+                self.__notion_configs['misc']['dir_save_bib'])
+            papnt.mainfunc.make_abbrjson_from_bibpath(
+                f'{self.__notion_configs["misc"]["dir_save_bib"]}/{bib_name}.bib',
+                self.__notion_configs['abbr'])
+        except:
+            import sys
+            exc=sys.exc_info()
+            self.run_button.text=str(exc[1])
+            self.run_button.style=ft.ButtonStyle(bgcolor=ft.colors.RED)
+            self.update()
+        # self.run_button.style=None
+        # self.run_button.text="bibファイルを出力する"
+        # self.update()
