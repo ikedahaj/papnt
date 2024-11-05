@@ -33,7 +33,16 @@ def _access_notion_prop(value_props):
         case _:
             raise ValueError('Invalid mode')
 
-def _access_notion_prop_value(prop_page,prop):
+def _access_notion_prop_value(prop_page:dict,prop:str)->str:
+    """notionのページから、propの値を返す
+
+    Args:
+        prop_page (dict): notionのページ."results"の値
+        prop (string): notionのプロパティ名
+
+    Returns:
+        string: 入力したページの値
+    """
     page_prop=prop_page["properties"]
     return _access_notion_prop(page_prop[prop])
 
@@ -122,7 +131,7 @@ class _Bib_File_Name(ft.Row):
         on_submit=self.__handle_submit,
         on_tap=self.__handle_tap,
         controls=[self.__BFN_listview],
-    )
+        )
         text=ft.Text(visible=False,value="bibファイル名を入力")
         button=ft.FloatingActionButton(icon=ft.icons.EDIT,mini=True,on_click=self.__reset_anchor,visible=False)
         self.controls=[self.__BFN_serBar,text,button]
@@ -229,6 +238,23 @@ class _Edit_Database(ft.Row):
             self.config.write(configfile, True)
         self.update()
 
+class _Text_Paper(ft.Row):
+    def __init__(self,text:str,notion_result:dict,add_to_input_list):
+
+        super().__init__()
+        self.value=text
+        self.data=notion_result
+        self.__TP_add_to_input_list=add_to_input_list
+        self.__TP_display_text=ft.Text(value=self.value)
+        self.__TP_delete_button=ft.FloatingActionButton(icon=ft.icons.DELETE,on_click=self.__delete_clicked)
+        self.controls=[self.__TP_display_text,self.__TP_delete_button]
+    def __delete_clicked(self,e):
+        self.__TP_add_to_input_list(self.data)
+        self.clean()
+    def change_text(self,propname):
+        self.value=_access_notion_prop_value(self.data,propname)
+        self.update()
+
 
 class view_bib_maker(ft.View):
     def __init__(self):
@@ -244,7 +270,14 @@ class view_bib_maker(ft.View):
         response=self.database.notion.databases.query(self.database.database_id)
         self.results=response["results"]
 
+        #モジュールの宣言;
+        self.select_prop_flag=ft.Dropdown(value="Name",width=150)
+        self.Paper_list=ft.Column(scroll=ft.ScrollMode.HIDDEN,expand=True)
+        self._input_Paper_List=_Papers_List(self.results,self._add_Paper_list)
+        self.run_button=ft.FilledButton("bibファイルを出力する",on_click=self.__makebib)
+
         #基礎設定:データベースの設定;
+        #bibファイル名の候補を出す;
         filename_list=[]
         for name in self.results:
             next_list=name["properties"][self.__notion_configs["propnames"]["output_target"]]["multi_select"]
@@ -253,38 +286,27 @@ class view_bib_maker(ft.View):
                     filename_list.append(next_name["name"])
         self._Bib_Name=_Bib_File_Name(filename_list,self.add_Paper_List_New_Cite_in_prop)
         self.controls.append(ft.Row(controls=[_Edit_Database(),self._Bib_Name],alignment=ft.MainAxisAlignment.SPACE_BETWEEN))
-
+        # self.scroll=ft.ScrollMode.HIDDEN
         #構成要素：入力とか;
-        self.select_prop_flag=ft.Dropdown(value="Name",width=150)
-        self.Paper_list=ft.Column()
-        self._input_Paper_List=_Papers_List(self.results,self._add_Paper_list)
         self.select_prop_flag.on_change=self._dropdown_changed
         self.select_prop_flag.options=[ft.dropdown.Option(key=propname) for propname in self.__notion_configs["propnames"].values()]
         self.select_prop_flag.options.insert(0,ft.dropdown.Option(key="Name"))
         self._input_Paper_List.bar_leading=self.select_prop_flag
-        self.run_button=ft.FilledButton("bibファイルを出力する",on_click=self.__makebib)
         self.controls.append(self._input_Paper_List)
         self.controls.append(self.run_button)
         self.controls.append(self.Paper_list)
-    def _change_prop_name(self,propname):
+    def _change_prop_name(self,propname:str)->None:
+        item:type[_Text_Paper]
         for item in self.Paper_list.controls:
-            item.controls[0].value=_access_notion_prop_value(item.controls[0].data,propname)
+            item.change_text(propname)
         self.Paper_list.update()
         self._input_Paper_List.PL_change_prop_name(propname)
-    def _delete_text(self,text_row:ft.Row):
-        text=text_row.controls[0]
-        self._input_Paper_List.add_new_props(text.data)
-        text_row.clean()
-        self.Paper_list.update()
+    def _add_prop_to_input_list(self,notion_page):
+        self._input_Paper_List.add_new_props(notion_page)
 
     def _add_Paper_list(self,text_value,notion_result):
-        text=ft.Text(text_value,data=notion_result)
-        del_button=ft.FloatingActionButton(icon=ft.icons.DELETE)
-        add_text_list=ft.Row(controls=[text,del_button])
-        def delete_clicked(e):
-            self._delete_text(add_text_list)
-        add_text_list.controls[1].on_click=delete_clicked
-        self.Paper_list.controls.insert(0,add_text_list)
+        new_text_cl=_Text_Paper(text_value,notion_result,self._input_Paper_List.add_new_props)
+        self.Paper_list.controls.insert(0,new_text_cl)
         self.Paper_list.update()
     def _dropdown_changed(self,e):
         self._change_prop_name(e.data)
@@ -336,9 +358,10 @@ class view_bib_maker(ft.View):
         except:
             import sys
             exc=sys.exc_info()
+            print(str(exc[1]))
             self.run_button.text=str(exc[1])
             self.run_button.style=ft.ButtonStyle(bgcolor=ft.colors.RED)
             self.update()
-        # self.run_button.style=None
-        # self.run_button.text="bibファイルを出力する"
-        # self.update()
+        self.run_button.style=None
+        self.run_button.text="bibファイルを出力する"
+        self.update()

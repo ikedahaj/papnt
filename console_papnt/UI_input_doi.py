@@ -33,7 +33,7 @@ def __format_doi(doi:str)->str:
     if " " in doi:
         doi=doi.replace(" ","")
     if ("arXiv" in doi) and doi[-2]=="v":
-        
+
         doi=doi[:-2]
     elif ("arXiv" in doi) and doi[-3]=="v":
         doi=doi[:-3]
@@ -182,9 +182,9 @@ class View_input_doi(ft.View):
         add_button=ft.FloatingActionButton(icon=ft.icons.ADD, on_click=add_clicked)
         run_button=ft.FloatingActionButton(icon=ft.icons.RUN_CIRCLE, on_click=run_clicked)
         delete_button=ft.FloatingActionButton(icon=ft.icons.DELETE, on_click=delete_clicked)
-        list_doi=ft.Column()
+        list_doi=ft.Column(scroll=ft.ScrollMode.HIDDEN,expand=True)
         # 画面に追加する;
-        self.controls.append(ft.Row([ft.Text("　論文追加",theme_style=ft.TextThemeStyle.HEADLINE_LARGE,weight=ft.FontWeight.W_900)],alignment=ft.MainAxisAlignment.SPACE_BETWEEN,height=50))
+        self.controls.append(ft.Row([ft.Text("論文追加",theme_style=ft.TextThemeStyle.HEADLINE_LARGE)],alignment=ft.MainAxisAlignment.SPACE_BETWEEN,height=50))
         self.controls.append(_Edit_Database())
         self.controls.append(ft.Row([input_text_doi,add_button],alignment=ft.MainAxisAlignment.SPACE_BETWEEN))
         self.controls.append(ft.Row([run_button,delete_button]))
