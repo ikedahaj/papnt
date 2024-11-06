@@ -1,5 +1,9 @@
+from operator import truediv
+from re import split
 import typing
+import os
 import time
+from anyio import value
 import flet as ft
 import configparser
 import papnt
@@ -207,32 +211,124 @@ class _Bib_File_Name(ft.Row):
         self.__BFN_serBar.open_view()
         self.__BFN_serBar.data=True
 
+class _Get_Folder_Name(ft.SearchBar):
+    def __init__(self,foldername_init:str|None,funk_decide):
+        """bibファイルを出すフォルダー名を入力する
+
+        Args:
+            foldername_init (str | None): フォルダ名の初期値
+            funk_decide (function): submitするときに呼ぶ関数。引数はなし
+        """
+        super().__init__()
+        # anchor=ft.SearchBar()
+        self.value=None if foldername_init =="''" else foldername_init
+        self.GFN_folder_name=self.value
+        self.__GFN_listview=ft.ListView(controls=[])
+        self.view_elevation=4
+        self.controls=[self.__GFN_listview]
+        self.bar_hint_text="bibファイルを出力するフォルダ名を入力"
+        self.view_hint_text=self.bar_hint_text+"/を入力することで次の候補が出現"
+        self.on_tap=self.__handle_tap
+        self.on_change=self.__GFN_handle_change
+        self.on_submit=self.__handle_submit
+        self.view_trailing=[ft.FloatingActionButton(icon=ft.icons.DONE,on_click=self.__clicked_submit)]
+        self.__GFN_list_suggest_folder=[]
+        self.__function_decide=funk_decide
+
+    def __GFN_sort_strings(self, B):
+        starts_with_B = []
+        includes_B=[]
+        does_not_start_with_B = []
+        for str in self.__GFN_list_suggest_folder:
+            if str.lower().startswith(B.lower()):
+                starts_with_B.append(str)
+            elif B.lower() in str.lower():
+                includes_B.append(str)
+            else :
+                does_not_start_with_B.append(str)
+        starts_with_B.sort()
+        includes_B.sort()
+        does_not_start_with_B.sort()
+        self.__GFN_list_suggest_folder= starts_with_B+includes_B + does_not_start_with_B
+    def __GFN_update_listview(self,texts_list):
+        # self.__GFN_listview.clean()
+        new_controls=[]
+        for name in texts_list:
+            new_controls.append(ft.ListTile(title=ft.Text(name),on_click=self.__tiles_clicked))
+        self.__GFN_listview.controls=new_controls
+    def __GFN_update_suggest_folder(self,path_dir):
+        self.__GFN_list_suggest_folder=[f for f in os.listdir(path_dir) if os.path.isdir(os.path.join(path_dir,f))]
+        self.__GFN_update_listview(self.__GFN_list_suggest_folder)
+    def __tiles_clicked(self,e):
+        text=e.control.title.value
+        self.GFN_folder_name+=text+'/'
+        self.value=self.GFN_folder_name
+        self.__GFN_update_suggest_folder(self.value)
+        self.focus()
+        self.update()
+    def GFN_update_value(self,new_value:str):
+        # print(new_value)
+        if new_value is None:
+            self.__GFN_listview.clean()
+        elif new_value=="":
+            self.__GFN_listview.clean()
+        elif new_value[-1]=='/':
+            self.GFN_folder_name=new_value
+            self.__GFN_update_suggest_folder(new_value)
+        else:
+            split_value=new_value.split("/")
+            now_folder=""
+            for i in range(len(split_value)-1):
+                now_folder+=split_value[i]+'/'
+            self.GFN_folder_name=now_folder
+            self.__GFN_update_suggest_folder(now_folder)
+            # print(split_value)
+            next_folder=split_value[-1]
+            # print(next_folder)
+            self.__GFN_sort_strings(next_folder)
+            self.__GFN_update_listview(self.__GFN_list_suggest_folder)
+        self.update()
+    def __GFN_handle_change(self,e):
+        now_value:str|None=e.data
+        self.GFN_update_value(now_value)
+    def __handle_tap(self,e):
+        self.open_view()
+    def __GFN_Confirm_name(self):
+        self.close_view(self.value)
+        time.sleep(0.05)
+        self.__function_decide()
+    def __handle_submit(self,e):
+        self.__GFN_Confirm_name()
+    def __clicked_submit(self,e):
+        self.__GFN_Confirm_name()
+
+
+
 class _Edit_Database(ft.Row):
     def __init__(self):
         super().__init__()
         self.ED_path_config=papnt.__path__[0]+"/config.ini"
         self.config=configparser.ConfigParser(comment_prefixes='/', allow_no_value=True)
         self.config.read(self.ED_path_config)
-        ED_text_dir_save_bibfile_decided=ft.Text(value=self.config["misc"]["dir_save_bib"],expand=True)
-        ED_button_edit=ft.FloatingActionButton(icon=ft.icons.EDIT,on_click=self.__ED_clicked_text_edit,mini=True)
-        ED_text_dir_save_bibfile_input=ft.TextField(value=ED_text_dir_save_bibfile_decided.value,hint_text="dirname of bib file",visible=False)
-        ED_button_done_edit=ft.FloatingActionButton(icon=ft.icons.DONE,on_click=self.__ED_clicked_done_edit,mini=True,visible=False)
-        self.controls=[ED_text_dir_save_bibfile_decided, ED_button_edit,ED_text_dir_save_bibfile_input,ED_button_done_edit]
-    def __ED_clicked_text_edit(self,e):
-        self.controls[0].visible=False
-        self.controls[1].visible=False
-        self.controls[2].visible=True
-        self.controls[3].visible=True
-        self.controls[2].value=self.controls[0].value
+        self.ED_text_dir_save_bibfile_decided=ft.Text(value=self.config["misc"]["dir_save_bib"],expand=True)
+        self.ED_button_open_edit=ft.FloatingActionButton(icon=ft.icons.EDIT,on_click=self.__ED_clicked_open_edit_view,mini=True)
+        self.ED_text_dir_save_bibfile_input=_Get_Folder_Name(self.ED_text_dir_save_bibfile_decided.value,self.__ED_clicked_done_edit)
+        self.controls=[self.ED_text_dir_save_bibfile_decided, self.ED_button_open_edit,self.ED_text_dir_save_bibfile_input]
+        self.ED_text_dir_save_bibfile_input.visible=False
+    def __ED_clicked_open_edit_view(self,e):
+        self.ED_text_dir_save_bibfile_decided.visible=False
+        self.ED_button_open_edit.visible=False
+        self.ED_text_dir_save_bibfile_input.visible=True
+        self.ED_text_dir_save_bibfile_input.GFN_update_value(self.ED_text_dir_save_bibfile_decided.value)
+        self.ED_text_dir_save_bibfile_input.open_view()
         self.update()
 
-    def __ED_clicked_done_edit(self,e):
-        self.controls[0].visible=True
-        self.controls[1].visible=True
-        self.controls[2].visible=False
-        self.controls[3].visible=False
-        new_text=self.controls[2].value
-        self.controls[0].value=new_text
+    def __ED_clicked_done_edit(self):
+        self.ED_text_dir_save_bibfile_decided.visible=True
+        self.ED_button_open_edit.visible=True
+        self.ED_text_dir_save_bibfile_input.visible=False
+        new_text=self.ED_text_dir_save_bibfile_input.value
+        self.ED_text_dir_save_bibfile_decided.value=new_text
         self.config["misc"]["dir_save_bib"]=new_text
         with open(self.ED_path_config, "w") as configfile:
             self.config.write(configfile, True)
