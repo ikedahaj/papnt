@@ -46,8 +46,8 @@ class _Edit_Database(ft.Row):
         self.ED_path_config=papnt.__path__[0]+"/config.ini"
         self.config=configparser.ConfigParser(comment_prefixes='/', allow_no_value=True)
         self.config.read(self.ED_path_config)
-        self.ED_text_tokenkey=ft.Text(value=self.config["database"]["tokenkey"])
-        self.ED_text_database_id=ft.Text(value=self.config["database"]["database_id"])
+        self.ED_text_tokenkey=ft.Text(value=(None if self.config["database"]["tokenkey"] =="''" else self.config["database"]["tokenkey"]) )
+        self.ED_text_database_id=ft.Text(value=(None if self.config["database"]["database_id"]=="''" else self.config["database"]["database_id"]))
         ED_buttun_edit=ft.FloatingActionButton(icon=ft.icons.EDIT,on_click=self.__ED_clicked_text_edit)
         ED_buttun_edit.mini=True
         self.controls=[ED_buttun_edit,self.ED_text_tokenkey,self.ED_text_database_id]
